@@ -35,6 +35,7 @@ button:disabled{opacity:.5}
 .code{font-size:30px;font-weight:900;letter-spacing:6px;color:#7c3aed}
 .note{font-size:12px;color:#64748b;margin-top:10px;line-height:1.5}
 .hidden{display:none!important}
+.filebtn{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border-radius:16px;padding:9px 8px;cursor:pointer;color:#fff;background:linear-gradient(180deg,#f9a8d4,#ec4899);box-shadow:0 5px 0 #be185d}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:6px 0}
 .tabs button{flex:0 0 auto;font-size:13px;padding:6px 10px;border-radius:999px;box-shadow:none;background:#e2e8f0;color:#1e3a5f}
 .tabs button.on{color:#fff}
@@ -65,6 +66,8 @@ button:disabled{opacity:.5}
   <div class="row"><button id="bSolo">单人跑</button><button class="gray" id="bBoard" style="flex:0 0 110px;background:#ffb703;box-shadow:0 5px 0 #c98a00">🏆 排行榜</button></div>
   <div class="row" id="netRow"><button class="blue" id="bCreate">创建房间</button><button class="blue" id="bJoinShow">加入房间</button></div>
   <div id="joinRow" class="row hidden"><input id="code" maxlength="4" placeholder="4位房间号" inputmode="numeric"><button class="blue" id="bJoin" style="flex:0 0 90px">加入</button></div>
+  <div class="row" id="musicRow"><button class="gray" id="bMusic" style="font-size:14px;padding:9px 8px">🎵 音乐：开</button><label class="filebtn" style="flex:1"><input type="file" id="songFile" accept="audio/*" hidden>🎧 用我自己的歌</label></div>
+  <div class="note" id="songNote" style="margin-top:6px"></div>
   <div class="note" id="netNote">最高分：<b id="best">0</b></div>
 </div></div>
 
@@ -434,6 +437,32 @@ function toast(t){const n=$('netNote');const old=n.innerHTML;n.textContent=t;set
 /* ---------- audio ---------- */
 let AC=null;function unlockAudio(){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume()}catch(e){}}
 function sfx(f,dur,type){if(!AC)return;try{const o=AC.createOscillator(),g=AC.createGain();o.type=type||'square';o.frequency.value=f;o.frequency.exponentialRampToValueAtTime(f*1.5,AC.currentTime+dur);g.gain.value=.06;g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+dur);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+dur)}catch(e){}}
+
+/* ---------- music: original chiptune loop ---------- */
+let musicOn=store.get('music',true),customAudio=null,seqTimer=null,stepN=0,nextT=0,mGain=null,noiseBuf=null;
+const BPM=138,NF=m=>440*Math.pow(2,(m-69)/12);
+const _=0;
+const LEAD=[72,_,76,_,79,_,76,_,77,76,74,_,72,_,_,_, 72,_,76,_,81,_,79,_,76,_,74,72,74,_,_,_, 77,_,76,_,74,_,72,_,74,_,77,_,81,_,79,_, 79,_,77,76,74,_,71,_,74,_,79,_,77,_,74,_];
+const ROOTS=[48,45,41,43];
+function initMusic(){if(!AC||mGain)return;mGain=AC.createGain();mGain.gain.value=.5;mGain.connect(AC.destination);
+  noiseBuf=AC.createBuffer(1,AC.sampleRate*.05,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length)}
+function tone(f,t,dur,type,vol){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0005,t+dur);o.connect(g);g.connect(mGain);o.start(t);o.stop(t+dur+.02)}
+function playStep(n,t){const bar=Math.floor(n/16)%4,i=n%16,root=ROOTS[bar];
+  const lead=LEAD[n%64];if(lead)tone(NF(lead),t,.16,'square',.045),tone(NF(lead+12),t,.1,'triangle',.02);
+  if(i%2===0)tone(NF(root+(i%4===2?12:0)),t,.14,'triangle',.11);
+  if(i%4===0){const o=AC.createOscillator(),g=AC.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+.12);g.gain.setValueAtTime(.22,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);o.connect(g);g.connect(mGain);o.start(t);o.stop(t+.15)}
+  if(i%2===1){const src=AC.createBufferSource(),g=AC.createGain(),hp=AC.createBiquadFilter();hp.type='highpass';hp.frequency.value=6000;src.buffer=noiseBuf;g.gain.value=i%4===3?.08:.04;src.connect(hp);hp.connect(g);g.connect(mGain);src.start(t)}
+  if(i===0||i===8){for(const k of [0,4,7])tone(NF(root+24+k+(bar===1?-0:0)),t,.25,'sine',.015)}}
+function schedule(){const spb=60/(BPM+(G&&mode==='run'?Math.min(30,G.d/400):0))/4;while(nextT<AC.currentTime+.15){playStep(stepN,nextT);nextT+=spb;stepN=(stepN+1)%64}}
+function startMusic(){if(!musicOn)return;unlockAudio();if(customAudio){customAudio.play().catch(()=>{});return}if(!AC||seqTimer)return;initMusic();nextT=AC.currentTime+.06;seqTimer=setInterval(schedule,30)}
+function stopMusic(){if(seqTimer){clearInterval(seqTimer);seqTimer=null}if(customAudio)customAudio.pause()}
+function renderMusicBtn(){$('bMusic').textContent='🎵 音乐：'+(musicOn?'开':'关')}
+$('bMusic').onclick=()=>{musicOn=!musicOn;store.set('music',musicOn);renderMusicBtn();if(musicOn)startMusic();else stopMusic()};
+$('songFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;stopMusic();if(customAudio){try{URL.revokeObjectURL(customAudio.src)}catch(_){}}
+  customAudio=new Audio(URL.createObjectURL(f));customAudio.loop=true;customAudio.volume=.7;$('songNote').textContent='正在播放：'+f.name.slice(0,30)+'（只在你这台设备上播放）';musicOn=true;store.set('music',true);renderMusicBtn();startMusic()};
+renderMusicBtn();
+document.addEventListener('pointerdown',()=>{if(musicOn&&!seqTimer&&!(customAudio&&!customAudio.paused))startMusic()},{once:false,capture:true});
+addEventListener('keydown',e=>{if(e.code==='KeyM'&&e.target.tagName!=='INPUT')$('bMusic').click()});
 
 /* ---------- loop ---------- */
 let last=performance.now(),demoD=0;
