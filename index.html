@@ -35,9 +35,9 @@ button:disabled{opacity:.5}
 .code{font-size:30px;font-weight:900;letter-spacing:6px;color:#7c3aed}
 .note{font-size:12px;color:#64748b;margin-top:10px;line-height:1.5}
 .hidden{display:none!important}
-.sbtn{font-size:12px;font-weight:800;padding:6px 9px;border-radius:999px;text-decoration:none;color:#fff;white-space:nowrap}
+.sbtn{font-size:11px;font-weight:800;padding:5px 7px;border-radius:999px;text-decoration:none;color:#fff;white-space:nowrap}
 .sbtn.am{background:linear-gradient(180deg,#fb7185,#e11d48)}.sbtn.ne{background:linear-gradient(180deg,#f87171,#c20c0c)}.sbtn.kg{background:linear-gradient(180deg,#60a5fa,#1d6fe0)}.sbtn.qq{background:linear-gradient(180deg,#4ade80,#16a34a)}.sbtn.pl{background:linear-gradient(180deg,#b388ff,#7c3aed);border:none;box-shadow:none;flex:0 0 auto}
-#songList li{flex-wrap:wrap;gap:5px}#songList .t{flex:1 0 100%}
+#songList{max-height:52vh;overflow:auto;-webkit-overflow-scrolling:touch}#songList li{flex-wrap:wrap;gap:5px}#songList .t{flex:1 0 100%}
 #embedBox iframe{width:100%;height:175px;border:0;border-radius:14px;margin-top:6px}
 .filebtn{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border-radius:16px;padding:9px 8px;cursor:pointer;color:#fff;background:linear-gradient(180deg,#f9a8d4,#ec4899);box-shadow:0 5px 0 #be185d}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:6px 0}
@@ -101,7 +101,7 @@ button:disabled{opacity:.5}
   <div class="row"><button class="gray" id="bBdBack">返回</button></div>
 </div></div>
 <div class="ui hidden" id="uiSongs"><div class="panel">
-  <div class="big" style="font-size:30px">🎶 TOP 歌单</div>
+  <div class="big" style="font-size:30px">🎶 TOP 歌单</div><div class="sub" id="songCount"></div>
   <div class="sub">选一首，边跑边听（游戏自带音乐会自动关掉）</div>
   <ul class="plist" id="songList"></ul>
   <div id="embedBox"></div>
@@ -478,16 +478,26 @@ addEventListener('keydown',e=>{if(e.code==='KeyM'&&e.target.tagName!=='INPUT')$(
 
 /* ---------- TOP song list (official players / links only) ---------- */
 const SONGS=[
+ {t:'竞速游戏',am:'https://music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',em:'https://embed.music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',qq:'https://c6.y.qq.com/base/fcgi-bin/u?__=jzDPl3seqLMy'},
+ {t:'Still Alive (背水一战)',q:'Still Alive 背水一战',am:'https://music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176',em:'https://embed.music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176'},
  {t:'略略略略略',am:'https://music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039',em:'https://embed.music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039'},
- {t:'Still Alive 背水一战',am:'https://music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176',em:'https://embed.music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176'},
  {t:'TOP的第一首抒情歌',am:'https://music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442',em:'https://embed.music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442'},
- {t:'竞速游戏',am:'https://music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',em:'https://embed.music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',qq:'https://c6.y.qq.com/base/fcgi-bin/u?__=jzDPl3seqLMy'}];
+ {t:'耶 (Yeah)',q:'耶'},
+ {t:'LØVE IS DANGEROUS! (危险的爱)',q:'LOVE IS DANGEROUS'},
+ {t:'命 (FATE)',q:'命 FATE'},
+ {t:'痴人说梦 (DayDream)',q:'痴人说梦'},
+ {t:'想得美',q:'想得美'},
+ {t:'你能听到吗',q:'你能听到吗'},
+ {t:'无所畏计划 (Emergency)',q:'无所畏计划'},
+ {t:'For You (写给你)',q:'写给你'},
+ {t:'我 VS Justin Bieber',q:'我 VS Justin Bieber'},
+ {t:'走在路上突然收到了快乐邀请',q:'走在路上突然收到了快乐邀请'}];
 const canEmbed=!window.claude; // the claude.ai page can't show other sites' players
 function muteBuiltIn(){if(musicOn){musicOn=false;store.set('music',false);renderMusicBtn();stopMusic()}}
-function renderSongs(){const ul=$('songList');ul.innerHTML='';SONGS.forEach((x,i)=>{const li=document.createElement('li');const t=document.createElement('span');t.className='t';t.textContent='🎵 '+x.t;li.append(t);
-  if(canEmbed){const b=document.createElement('button');b.className='sbtn pl';b.textContent='▶ 这里听';b.onclick=()=>{muteBuiltIn();const f=document.createElement('iframe');f.allow='autoplay *; encrypted-media *;';f.setAttribute('sandbox','allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation');f.src=x.em;$('embedBox').innerHTML='';$('embedBox').append(f)};li.append(b)}
-  const a=document.createElement('a');a.className='sbtn am';a.href=x.am;a.target='_blank';a.rel='noopener';a.textContent='Apple Music';a.onclick=muteBuiltIn;li.append(a);
-  const kw=encodeURIComponent('TOP登陆少年 '+x.t.replace(' 背水一战',''));
+function renderSongs(){const ul=$('songList');ul.innerHTML='';$('songCount').textContent='共 '+SONGS.length+' 首';SONGS.forEach((x,i)=>{const li=document.createElement('li');const t=document.createElement('span');t.className='t';t.textContent='🎵 '+x.t;li.append(t);
+  if(canEmbed&&x.em){const b=document.createElement('button');b.className='sbtn pl';b.textContent='▶ 这里听';b.onclick=()=>{muteBuiltIn();const f=document.createElement('iframe');f.allow='autoplay *; encrypted-media *;';f.setAttribute('sandbox','allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation');f.src=x.em;$('embedBox').innerHTML='';$('embedBox').append(f)};li.append(b)}
+  const kw=encodeURIComponent('TOP登陆少年 '+(x.q||x.t));
+  const a=document.createElement('a');a.className='sbtn am';a.href=x.am||('https://music.apple.com/cn/search?term='+kw);a.target='_blank';a.rel='noopener';a.textContent='Apple Music';a.onclick=muteBuiltIn;li.append(a);
   const qqHref=x.qq||('https://y.qq.com/n/ryqq/search?w='+kw);
   for(const [cls,label,href] of [['qq','QQ音乐',qqHref],['ne','网易云',x.ne||('https://music.163.com/#/search/m/?s='+kw+'&type=1')],['kg','酷狗',x.kg||('https://www.kugou.com/yy/html/search.html#searchType=song&searchKeyWord='+kw)]]){
     const q=document.createElement('a');q.className='sbtn '+cls;q.href=href;q.target='_blank';q.rel='noopener';q.textContent=label;q.onclick=muteBuiltIn;li.append(q)}
