@@ -45,7 +45,12 @@ button:disabled{opacity:.5}
 .sbtn{font-size:11px;font-weight:800;padding:5px 7px;border-radius:999px;text-decoration:none;color:#fff;white-space:nowrap}
 .sbtn.am{background:linear-gradient(180deg,#fb7185,#e11d48)}.sbtn.ne{background:linear-gradient(180deg,#f87171,#c20c0c)}.sbtn.kg{background:linear-gradient(180deg,#60a5fa,#1d6fe0)}.sbtn.qq{background:linear-gradient(180deg,#4ade80,#16a34a)}.sbtn.pl{background:linear-gradient(180deg,#b388ff,#7c3aed);border:none;box-shadow:none;flex:0 0 auto}
 #songList{max-height:52vh;overflow:auto;-webkit-overflow-scrolling:touch}#songList li{flex-wrap:wrap;gap:5px}#songList .t{flex:1 0 100%}
-#embedBox iframe{width:100%;height:175px;border:0;border-radius:14px;margin-top:6px}
+#songList li.on{background:#f3e8ff;outline:2px solid #a78bfa}
+.player{background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(236,72,153,.18));border-radius:16px;padding:10px;margin:8px 0}
+.player .np{font-weight:800;color:#4c1d95;font-size:14px}
+.pbtn{font-size:12px;padding:7px 4px;border-radius:12px;box-shadow:0 3px 0 #5b21b6}
+.pbtn.gray{flex:0 0 40px}
+#miniNp{font-size:12px;color:#7c3aed;font-weight:700;margin-top:6px}
 .filebtn{display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;border-radius:16px;padding:9px 8px;cursor:pointer;color:#fff;background:linear-gradient(180deg,#f9a8d4,#ec4899);box-shadow:0 5px 0 #be185d}
 .tabs{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin:6px 0}
 .tabs button{flex:0 0 auto;font-size:13px;padding:6px 10px;border-radius:999px;box-shadow:none;background:#e2e8f0;color:#1e3a5f}
@@ -80,7 +85,7 @@ button:disabled{opacity:.5}
   <div class="row" id="netRow"><button class="blue" id="bCreate">创建房间</button><button class="blue" id="bJoinShow">加入房间</button></div>
   <div id="joinRow" class="row hidden"><input id="code" maxlength="4" placeholder="4位房间号" inputmode="numeric"><button class="blue" id="bJoin" style="flex:0 0 90px">加入</button></div>
   <div class="row" id="musicRow"><button class="gray" id="bMusic" style="font-size:14px;padding:9px 8px">🎵 音乐：开</button><button id="bSongs" style="font-size:14px;padding:9px 8px">🎶 选歌</button><label class="filebtn" style="flex:1"><input type="file" id="songFile" accept="audio/*" hidden>🎧 用我自己的歌</label></div>
-  <div class="note" id="songNote" style="margin-top:6px"></div>
+  <div class="note" id="songNote" style="margin-top:6px"></div><div id="miniNp" class="hidden"></div>
   <div class="note" id="netNote">最高分：<b id="best">0</b></div>
 </div></div>
 
@@ -112,9 +117,10 @@ button:disabled{opacity:.5}
 <div class="ui hidden" id="uiSongs"><div class="panel">
   <div class="big" style="font-size:30px">🎶 TOP 歌单</div><div class="sub" id="songCount"></div>
   <div class="sub">选一首，边跑边听（游戏自带音乐会自动关掉）</div>
+  <div class="player hidden" id="player"><div class="np" id="npTitle">点 ▶ 开始试听</div>
+    <div class="row" style="margin-top:6px"><button class="pbtn" id="pPlayAll">▶ 连续试听全部</button><button class="pbtn" id="pNext">⏭ 下一首</button><button class="pbtn" id="pLoop">🔁 列表循环</button><button class="pbtn gray" id="pStop">⏹</button></div></div>
   <ul class="plist" id="songList"></ul>
-  <div id="embedBox"></div>
-  <div class="note">歌曲由 Apple Music / QQ音乐 / 网易云 / 酷狗 官方播放，完整收听可能需要会员。<br>在手机上：先在音乐App里播放，再回来跑，歌会一直放。</div>
+  <div class="note">试听片段约 30 秒，由 Apple Music 官方提供；完整版请点平台按钮收听（可能需要会员）。<br>在手机上：先在音乐App里播放，再回来跑，歌会一直放。</div>
   <div class="row"><button class="gray" id="bSongsBack">返回</button></div>
 </div></div>
 <div class="ui hidden" id="uiLevels"><div class="panel">
@@ -525,7 +531,7 @@ function schedule(){const spb=60/(BPM+(G&&mode==='run'?Math.min(30,G.d/400):0))/
 function startMusic(){if(!musicOn)return;unlockAudio();if(customAudio){customAudio.play().catch(()=>{});return}if(!AC||seqTimer)return;initMusic();nextT=AC.currentTime+.06;seqTimer=setInterval(schedule,30)}
 function stopMusic(){if(seqTimer){clearInterval(seqTimer);seqTimer=null}if(customAudio)customAudio.pause()}
 function renderMusicBtn(){$('bMusic').textContent='🎵 音乐：'+(musicOn?'开':'关')}
-$('bMusic').onclick=()=>{musicOn=!musicOn;store.set('music',musicOn);renderMusicBtn();if(musicOn)startMusic();else stopMusic()};
+$('bMusic').onclick=()=>{if(!musicOn&&typeof pvStop==='function'&&pv.on)pvStop();musicOn=!musicOn;store.set('music',musicOn);renderMusicBtn();if(musicOn)startMusic();else stopMusic()};
 $('songFile').onchange=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;stopMusic();if(customAudio){try{URL.revokeObjectURL(customAudio.src)}catch(_){}}
   customAudio=new Audio(URL.createObjectURL(f));customAudio.loop=true;customAudio.volume=.7;$('songNote').textContent='正在播放：'+f.name.slice(0,30)+'（只在你这台设备上播放）';musicOn=true;store.set('music',true);renderMusicBtn();startMusic()};
 renderMusicBtn();
@@ -534,10 +540,10 @@ addEventListener('keydown',e=>{if(e.code==='KeyM'&&e.target.tagName!=='INPUT')$(
 
 /* ---------- TOP song list (official players / links only) ---------- */
 const SONGS=[
- {t:'竞速游戏',am:'https://music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',em:'https://embed.music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',qq:'https://c6.y.qq.com/base/fcgi-bin/u?__=jzDPl3seqLMy'},
- {t:'Still Alive (背水一战)',q:'Still Alive 背水一战',am:'https://music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176',em:'https://embed.music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176'},
- {t:'略略略略略',am:'https://music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039',em:'https://embed.music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039'},
- {t:'TOP的第一首抒情歌',am:'https://music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442',em:'https://embed.music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442'},
+ {t:'竞速游戏',id:6796795967,am:'https://music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',em:'https://embed.music.apple.com/cn/album/%E7%AB%9E%E9%80%9F%E6%B8%B8%E6%88%8F/6796795966?i=6796795967',qq:'https://c6.y.qq.com/base/fcgi-bin/u?__=jzDPl3seqLMy'},
+ {t:'Still Alive (背水一战)',q:'Still Alive 背水一战',id:1880031176,am:'https://music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176',em:'https://embed.music.apple.com/cn/album/still-alive-%E8%83%8C%E6%B0%B4%E4%B8%80%E6%88%98/1880031175?i=1880031176'},
+ {t:'略略略略略',id:6786018039,am:'https://music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039',em:'https://embed.music.apple.com/cn/album/%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5%E7%95%A5/6786017881?i=6786018039'},
+ {t:'TOP的第一首抒情歌',id:6808146442,am:'https://music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442',em:'https://embed.music.apple.com/cn/album/top%E7%9A%84%E7%AC%AC%E4%B8%80%E9%A6%96%E6%8A%92%E6%83%85%E6%AD%8C/6808145926?i=6808146442'},
  {t:'耶 (Yeah)',q:'耶'},
  {t:'LØVE IS DANGEROUS! (危险的爱)',q:'LOVE IS DANGEROUS'},
  {t:'命 (FATE)',q:'命 FATE'},
@@ -550,14 +556,42 @@ const SONGS=[
  {t:'走在路上突然收到了快乐邀请',q:'走在路上突然收到了快乐邀请'}];
 const canEmbed=!window.claude; // the claude.ai page can't show other sites' players
 function muteBuiltIn(){if(musicOn){musicOn=false;store.set('music',false);renderMusicBtn();stopMusic()}}
-function renderSongs(){const ul=$('songList');ul.innerHTML='';$('songCount').textContent='共 '+SONGS.length+' 首';SONGS.forEach((x,i)=>{const li=document.createElement('li');const t=document.createElement('span');t.className='t';t.textContent='🎵 '+x.t;li.append(t);
-  if(canEmbed&&x.em){const b=document.createElement('button');b.className='sbtn pl';b.textContent='▶ 这里听';b.onclick=()=>{muteBuiltIn();const f=document.createElement('iframe');f.allow='autoplay *; encrypted-media *;';f.setAttribute('sandbox','allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation');f.src=x.em;$('embedBox').innerHTML='';$('embedBox').append(f)};li.append(b)}
+function renderSongs(){$('player').classList.toggle('hidden',!canEmbed);const ul=$('songList');ul.innerHTML='';$('songCount').textContent='共 '+SONGS.length+' 首';SONGS.forEach((x,i)=>{const li=document.createElement('li');const t=document.createElement('span');t.className='t';t.textContent='🎵 '+x.t;li.append(t);
+  if(canEmbed){const b=document.createElement('button');b.className='sbtn pl';b.textContent=(pv.i===i&&pv.on)?'🔊 播放中':'▶ 试听';b.onclick=()=>{unlockAudio();pvPlay(i)};li.append(b)}
+  if(pv.i===i&&pv.on)li.classList.add('on');
   const kw=encodeURIComponent('TOP登陆少年 '+(x.q||x.t));
   const a=document.createElement('a');a.className='sbtn am';a.href=x.am||('https://music.apple.com/cn/search?term='+kw);a.target='_blank';a.rel='noopener';a.textContent='Apple Music';a.onclick=muteBuiltIn;li.append(a);
   const qqHref=x.qq||('https://y.qq.com/n/ryqq/search?w='+kw);
   for(const [cls,label,href] of [['qq','QQ音乐',qqHref],['ne','网易云',x.ne||('https://music.163.com/#/search/m/?s='+kw+'&type=1')],['kg','酷狗',x.kg||('https://www.kugou.com/yy/html/search.html#searchType=song&searchKeyWord='+kw)]]){
     const q=document.createElement('a');q.className='sbtn '+cls;q.href=href;q.target='_blank';q.rel='noopener';q.textContent=label;q.onclick=muteBuiltIn;li.append(q)}
   ul.append(li)})}
+/* ---- 30s preview player: official Apple previews via the iTunes Search API, chained one after another ---- */
+const pv={i:-1,on:false,loop:'all',audio:null,cache:{},tok:0};
+function jsonp(u){return new Promise((res,rej)=>{const cb='itcb'+Math.random().toString(36).slice(2);const s=document.createElement('script');const tm=setTimeout(()=>{cleanup();rej('timeout')},9000);
+  function cleanup(){clearTimeout(tm);try{delete window[cb]}catch(_){window[cb]=undefined}s.remove()}
+  window[cb]=d=>{cleanup();res(d)};s.src=u+(u.includes('?')?'&':'?')+'callback='+cb;s.onerror=()=>{cleanup();rej('err')};document.head.append(s)})}
+async function previewUrl(i){const x=SONGS[i];if(pv.cache[i]!==undefined)return pv.cache[i];let url=null;
+  try{if(x.id){const d=await jsonp('https://itunes.apple.com/lookup?id='+x.id+'&country=cn');url=d.results&&d.results[0]&&d.results[0].previewUrl||null}
+    if(!url){const key=(x.q||x.t).split(' ')[0];const d=await jsonp('https://itunes.apple.com/search?term='+encodeURIComponent('TOP登陆少年 '+(x.q||x.t))+'&entity=song&country=cn&limit=25');
+      const rs=(d.results||[]).filter(r=>r.previewUrl);const norm=v=>String(v||'').toLowerCase().replace(/ø/g,'o').replace(/\s/g,'');
+      const top=rs.filter(r=>/top/i.test(r.artistName||''));const hit=top.find(r=>norm(r.trackName).includes(norm(key)))||rs.find(r=>norm(r.trackName).includes(norm(key)))||null;url=hit?hit.previewUrl:null}}catch(e){url=null}
+  pv.cache[i]=url;return url}
+function setNp(t){$('npTitle').textContent=t;const m=$('miniNp');m.textContent=t;m.classList.toggle('hidden',!pv.on)}
+async function pvPlay(i,fails){fails=fails||0;if(fails>=SONGS.length){pvStop();setNp('暂时没找到可以试听的歌，可以点平台按钮收听');return}
+  muteBuiltIn();const tok=++pv.tok;pv.i=i;pv.on=true;setNp('⏳ 正在加载：'+SONGS[i].t);if(mode==='songs')renderSongs();
+  const url=await previewUrl(i);if(tok!==pv.tok)return;
+  if(!url){pvPlay((i+1)%SONGS.length,fails+1);return}
+  if(pv.audio){pv.audio.onended=null;pv.audio.pause()}
+  const a=new Audio(url);a.volume=.8;pv.audio=a;
+  a.onended=()=>{if(tok!==pv.tok)return;if(pv.loop==='one'){a.currentTime=0;a.play().catch(()=>{})}else pvPlay((pv.i+1)%SONGS.length)};
+  a.onerror=()=>{if(tok===pv.tok)pvPlay((i+1)%SONGS.length,fails+1)};
+  a.play().then(()=>{setNp('🎧 正在试听：'+SONGS[i].t+'（'+(i+1)+'/'+SONGS.length+'）')}).catch(()=>setNp('点一下 ▶ 继续播放：'+SONGS[i].t));
+  if(mode==='songs')renderSongs()}
+function pvStop(){pv.tok++;pv.on=false;if(pv.audio){pv.audio.onended=null;pv.audio.pause()}setNp('点 ▶ 开始试听');if(mode==='songs')renderSongs()}
+$('pPlayAll').onclick=()=>{unlockAudio();pvPlay(pv.i>=0?pv.i:0)};
+$('pNext').onclick=()=>{unlockAudio();pvPlay((pv.i+1)%SONGS.length)};
+$('pStop').onclick=pvStop;
+$('pLoop').onclick=()=>{pv.loop=pv.loop==='all'?'one':'all';$('pLoop').textContent=pv.loop==='all'?'🔁 列表循环':'🔂 单曲循环'};
 $('bSongs').onclick=()=>{renderSongs();show('songs')};
 $('bSongsBack').onclick=()=>show('menu');
 
